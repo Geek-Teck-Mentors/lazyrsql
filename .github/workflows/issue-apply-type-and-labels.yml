@@ -23,11 +23,15 @@ jobs:
               Feature: 'IT_kwDOC7Foc84BgB-H',
             };
 
+            const sectionRe = (heading) =>
+              new RegExp(`###\\s*${heading}\\s*\\n+[\\s\\S]*?(?=\\n###|$)`);
             const extract = (heading) => {
-              const re = new RegExp(`###\\s*${heading}\\s*\\n+([\\s\\S]*?)(?=\\n###|$)`);
-              const m = body.match(re);
-              return m ? m[1].trim() : '';
+              const m = body.match(sectionRe(heading));
+              if (!m) return '';
+              return m[0].replace(/^###\s*[^\n]*\n+/, '').trim();
             };
+
+            const stripped = new Set();
 
             const typeName = extract('Type');
             const typeId = TYPE_IDS[typeName];
@@ -43,6 +47,7 @@ jobs:
                   issueId: context.payload.issue.node_id,
                   typeId,
                 });
+                stripped.add('Type');
               } catch (e) {
                 core.warning(`Failed to apply issue type "${typeName}": ${e.message}`);
               }
@@ -59,6 +64,25 @@ jobs:
                   repo: context.repo.repo,
                   issue_number: context.issue.number,
                   labels,
+                });
+                stripped.add('ラベル');
+              }
+            } else if (labelsRaw === NO_RESPONSE) {
+              stripped.add('ラベル');
+            }
+
+            if (stripped.size > 0) {
+              let newBody = body;
+              for (const heading of stripped) {
+                newBody = newBody.replace(sectionRe(heading), '');
+              }
+              newBody = newBody.replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
+              if (newBody !== body) {
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: newBody,
                 });
               }
             }
