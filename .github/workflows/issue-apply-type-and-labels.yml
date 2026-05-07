@@ -17,6 +17,12 @@ jobs:
             const body = context.payload.issue.body || '';
             const NO_RESPONSE = '_No response_';
 
+            const TYPE_IDS = {
+              Task: 'IT_kwDOC7Foc84BgB-F',
+              Bug: 'IT_kwDOC7Foc84BgB-G',
+              Feature: 'IT_kwDOC7Foc84BgB-H',
+            };
+
             const extract = (heading) => {
               const re = new RegExp(`###\\s*${heading}\\s*\\n+([\\s\\S]*?)(?=\\n###|$)`);
               const m = body.match(re);
@@ -24,16 +30,9 @@ jobs:
             };
 
             const typeName = extract('Type');
-            if (typeName && typeName !== NO_RESPONSE) {
-              const res = await github.graphql(`
-                query($org: String!) {
-                  organization(login: $org) {
-                    issueTypes(first: 20) { nodes { id name } }
-                  }
-                }
-              `, { org: context.repo.owner });
-              const matched = res.organization.issueTypes.nodes.find(t => t.name === typeName);
-              if (matched) {
+            const typeId = TYPE_IDS[typeName];
+            if (typeId) {
+              try {
                 await github.graphql(`
                   mutation($issueId: ID!, $typeId: ID!) {
                     updateIssueIssueType(input: { issueId: $issueId, issueTypeId: $typeId }) {
@@ -42,11 +41,13 @@ jobs:
                   }
                 `, {
                   issueId: context.payload.issue.node_id,
-                  typeId: matched.id,
+                  typeId,
                 });
-              } else {
-                core.warning(`Issue type "${typeName}" not found in organization`);
+              } catch (e) {
+                core.warning(`Failed to apply issue type "${typeName}": ${e.message}`);
               }
+            } else if (typeName && typeName !== NO_RESPONSE) {
+              core.warning(`Unknown issue type: "${typeName}"`);
             }
 
             const labelsRaw = extract('ラベル');
