@@ -1,0 +1,48 @@
+name: タスク
+description: 開発タスク用のIssue
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: このIssueで対応する内容の概要を記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: ゴール
+      description: このIssueで達成したい完了条件を記載してください。
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Type
+      description: このIssueの種別を選択してください。
+      options:
+        - Task
+        - Bug
+        - Feature
+    validations:
+      required: true
+
+  - type: dropdown
+    id: labels
+    attributes:
+      label: ラベル
+      description: 付与するラベルを選択してください（複数選択可）。
+      multiple: true
+      options:
+        - bug
+        - documentation
+        - enhancement
+        - good first issue
+        - help wanted
+        - question
+    validations:
+      required: false
